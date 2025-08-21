@@ -16,7 +16,7 @@ A Windows Forms application for managing medical appointments between doctors an
 
 - Windows 7 or higher
 - .NET Framework 4.7.2 or higher
-- No database required (uses local XML storage)
+- No external database required (uses SQLite)
 
 ## Setup Instructions
 
@@ -26,7 +26,7 @@ A Windows Forms application for managing medical appointments between doctors an
 2. Build the solution
 3. Run the application
 
-The application uses local XML storage, so no database setup is required. Sample data will be automatically generated on first run.
+The application uses SQLite for local storage, so no external database setup is required. Sample data will be automatically generated on first run.
 
 ## Usage Guide
 
@@ -75,14 +75,14 @@ Provides functionality to:
 
 - Language: C#
 - UI Framework: Windows Forms
-- Data Storage: Local XML files in the application's data directory
+- Data Storage: SQLite database in the application's data directory
 - Architecture: 3-tier (Presentation, Business Logic, Data Access)
 
 ## Data Storage
 
-The application uses XML files to store data locally:
-- `doctors.xml`: Contains information about doctors
-- `patients.xml`: Contains information about patients
-- `appointments.xml`: Contains information about appointments
+The application uses a SQLite database to store data locally:
+- **Doctors table**: Contains information about doctors (ID, name, specialty, availability, phone number)
+- **Patients table**: Contains information about patients (ID, name, email)
+- **Appointments table**: Contains information about appointments (ID, doctor ID, patient ID, date, notes)
 
-These files are automatically created in the application's data folder when the application is first run. Sample data is generated automatically.
+The SQLite database file (`MedicalSystem.db`) is automatically created in the application's data folder when the application is first run. Sample data is generated automatically.

@@ -1,16 +1,14 @@
 using System;
 using System.Data;
 using System.IO;
-using System.Xml;
-using System.Xml.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.Data.SQLite;
 
 namespace MedicalAppointmentSystem.Data
 {
-    // Model classes for serialization
-    [Serializable]
+    // Model classes for reference
     public class Doctor
     {
         public int DoctorID { get; set; }
@@ -18,8 +16,7 @@ namespace MedicalAppointmentSystem.Data
         public string Specialty { get; set; }
         public bool Availability { get; set; }
         
-        // Properties for UI that are not serialized
-        [XmlIgnore]
+        // Properties for UI
         public string FirstName
         {
             get
@@ -29,7 +26,6 @@ namespace MedicalAppointmentSystem.Data
             }
         }
         
-        [XmlIgnore]
         public string LastName
         {
             get
@@ -40,11 +36,9 @@ namespace MedicalAppointmentSystem.Data
             }
         }
         
-        [XmlIgnore]
         public string PhoneNumber { get; set; } = "";
     }
     
-    [Serializable]
     public class Patient
     {
         public int PatientID { get; set; }
@@ -52,7 +46,6 @@ namespace MedicalAppointmentSystem.Data
         public string Email { get; set; }
     }
     
-    [Serializable]
     public class Appointment
     {
         public int AppointmentID { get; set; }
@@ -64,19 +57,12 @@ namespace MedicalAppointmentSystem.Data
 
     public class DatabaseHelper
     {
-        // File paths for local storage
-        private readonly string doctorsFilePath;
-        private readonly string patientsFilePath;
-        private readonly string appointmentsFilePath;
+        private readonly string connectionString;
+        private readonly string dbPath;
         
-        // In-memory data storage
-        private List<Doctor> doctors;
-        private List<Patient> patients;
-        private List<Appointment> appointments;
-
         public DatabaseHelper()
         {
-            // Set up file paths in the application's directory
+            // Set up database path in the application's directory
             string appDataPath = Path.Combine(Application.StartupPath, "Data");
             
             // Create directory if it doesn't exist
@@ -85,148 +71,100 @@ namespace MedicalAppointmentSystem.Data
                 Directory.CreateDirectory(appDataPath);
             }
             
-            doctorsFilePath = Path.Combine(appDataPath, "doctors.xml");
-            patientsFilePath = Path.Combine(appDataPath, "patients.xml");
-            appointmentsFilePath = Path.Combine(appDataPath, "appointments.xml");
+            dbPath = Path.Combine(appDataPath, "MedicalSystem.db");
+            connectionString = $"Data Source={dbPath};Version=3;";
             
-            // Initialize data
-            LoadData();
+            // Create database and tables if they don't exist
+            InitializeDatabase();
         }
         
-        // Load data from XML files or create sample data if files don't exist
-        private void LoadData()
+        // Initialize the SQLite database and create tables if they don't exist
+        private void InitializeDatabase()
         {
-            // Load or create doctors
-            if (File.Exists(doctorsFilePath))
-            {
-                doctors = DeserializeFromXml<List<Doctor>>(doctorsFilePath);
-            }
-            else
-            {
-                doctors = CreateSampleDoctors();
-                SerializeToXml(doctors, doctorsFilePath);
-            }
+            bool dbExists = File.Exists(dbPath);
             
-            // Load or create patients
-            if (File.Exists(patientsFilePath))
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                patients = DeserializeFromXml<List<Patient>>(patientsFilePath);
-            }
-            else
-            {
-                patients = CreateSamplePatients();
-                SerializeToXml(patients, patientsFilePath);
-            }
-            
-            // Load or create appointments
-            if (File.Exists(appointmentsFilePath))
-            {
-                appointments = DeserializeFromXml<List<Appointment>>(appointmentsFilePath);
-            }
-            else
-            {
-                appointments = CreateSampleAppointments();
-                SerializeToXml(appointments, appointmentsFilePath);
-            }
-        }
-        
-        // Create sample doctors
-        private List<Doctor> CreateSampleDoctors()
-        {
-            return new List<Doctor>
-            {
-                new Doctor { DoctorID = 1, FullName = "Dr. John Smith", Specialty = "Cardiology", Availability = true },
-                new Doctor { DoctorID = 2, FullName = "Dr. Sarah Johnson", Specialty = "Pediatrics", Availability = true },
-                new Doctor { DoctorID = 3, FullName = "Dr. Michael Brown", Specialty = "Orthopedics", Availability = true },
-                new Doctor { DoctorID = 4, FullName = "Dr. Emily Davis", Specialty = "Dermatology", Availability = true },
-                new Doctor { DoctorID = 5, FullName = "Dr. Robert Wilson", Specialty = "Neurology", Availability = false }
-            };
-        }
-        
-        // Create sample patients
-        private List<Patient> CreateSamplePatients()
-        {
-            return new List<Patient>
-            {
-                new Patient { PatientID = 1, FullName = "James Anderson", Email = "james.anderson@email.com" },
-                new Patient { PatientID = 2, FullName = "Emma Thompson", Email = "emma.t@email.com" },
-                new Patient { PatientID = 3, FullName = "Daniel Mitchell", Email = "dan.mitchell@email.com" },
-                new Patient { PatientID = 4, FullName = "Olivia Parker", Email = "olivia.p@email.com" },
-                new Patient { PatientID = 5, FullName = "William Scott", Email = "will.scott@email.com" }
-            };
-        }
-        
-        // Create sample appointments
-        private List<Appointment> CreateSampleAppointments()
-        {
-            return new List<Appointment>
-            {
-                new Appointment 
-                { 
-                    AppointmentID = 1, 
-                    DoctorID = 1, 
-                    PatientID = 2, 
-                    AppointmentDate = DateTime.Now.AddDays(3), 
-                    Notes = "Regular checkup" 
-                },
-                new Appointment 
-                { 
-                    AppointmentID = 2, 
-                    DoctorID = 3, 
-                    PatientID = 4, 
-                    AppointmentDate = DateTime.Now.AddDays(5), 
-                    Notes = "Follow-up appointment" 
-                },
-                new Appointment 
-                { 
-                    AppointmentID = 3, 
-                    DoctorID = 2, 
-                    PatientID = 1, 
-                    AppointmentDate = DateTime.Now.AddDays(7), 
-                    Notes = "Consultation" 
-                }
-            };
-        }
-        
-        // Save data back to XML files
-        private void SaveData()
-        {
-            SerializeToXml(doctors, doctorsFilePath);
-            SerializeToXml(patients, patientsFilePath);
-            SerializeToXml(appointments, appointmentsFilePath);
-        }
-        
-        // Helper methods for XML serialization
-        private void SerializeToXml<T>(T data, string filePath)
-        {
-            try
-            {
-                XmlSerializer serializer = new XmlSerializer(typeof(T));
-                using (TextWriter writer = new StreamWriter(filePath))
+                connection.Open();
+                
+                // Create tables if they don't exist
+                using (SQLiteCommand command = new SQLiteCommand(connection))
                 {
-                    serializer.Serialize(writer, data);
+                    // Create Doctors table
+                    command.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS Doctors (
+                        DoctorID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        FullName TEXT NOT NULL,
+                        Specialty TEXT NOT NULL,
+                        Availability INTEGER NOT NULL,
+                        PhoneNumber TEXT
+                    )";
+                    command.ExecuteNonQuery();
+                    
+                    // Create Patients table
+                    command.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS Patients (
+                        PatientID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        FullName TEXT NOT NULL,
+                        Email TEXT NOT NULL
+                    )";
+                    command.ExecuteNonQuery();
+                    
+                    // Create Appointments table
+                    command.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS Appointments (
+                        AppointmentID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        DoctorID INTEGER NOT NULL,
+                        PatientID INTEGER NOT NULL,
+                        AppointmentDate TEXT NOT NULL,
+                        Notes TEXT,
+                        FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
+                        FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
+                    )";
+                    command.ExecuteNonQuery();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error serializing data: {ex.Message}");
+                
+                // Insert sample data if this is a new database
+                if (!dbExists)
+                {
+                    InsertSampleData(connection);
+                }
             }
         }
         
-        private T DeserializeFromXml<T>(string filePath)
+        // Insert sample data into the database
+        private void InsertSampleData(SQLiteConnection connection)
         {
-            try
+            // Insert sample doctors
+            using (SQLiteCommand command = new SQLiteCommand(connection))
             {
-                XmlSerializer serializer = new XmlSerializer(typeof(T));
-                using (TextReader reader = new StreamReader(filePath))
-                {
-                    return (T)serializer.Deserialize(reader);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deserializing data: {ex.Message}");
-                return default;
+                command.CommandText = @"
+                INSERT INTO Doctors (FullName, Specialty, Availability, PhoneNumber) VALUES 
+                ('Dr. John Smith', 'Cardiology', 1, '555-123-4567'),
+                ('Dr. Sarah Johnson', 'Pediatrics', 1, '555-234-5678'),
+                ('Dr. Michael Brown', 'Orthopedics', 1, '555-345-6789'),
+                ('Dr. Emily Davis', 'Dermatology', 1, '555-456-7890'),
+                ('Dr. Robert Wilson', 'Neurology', 0, '555-567-8901')";
+                command.ExecuteNonQuery();
+                
+                // Insert sample patients
+                command.CommandText = @"
+                INSERT INTO Patients (FullName, Email) VALUES 
+                ('James Anderson', 'james.anderson@email.com'),
+                ('Emma Thompson', 'emma.t@email.com'),
+                ('Daniel Mitchell', 'dan.mitchell@email.com'),
+                ('Olivia Parker', 'olivia.p@email.com'),
+                ('William Scott', 'will.scott@email.com')";
+                command.ExecuteNonQuery();
+                
+                // Insert sample appointments
+                DateTime today = DateTime.Now;
+                command.CommandText = $@"
+                INSERT INTO Appointments (DoctorID, PatientID, AppointmentDate, Notes) VALUES 
+                (1, 2, '{today.AddDays(3).ToString("yyyy-MM-dd HH:mm:ss")}', 'Regular checkup'),
+                (3, 4, '{today.AddDays(5).ToString("yyyy-MM-dd HH:mm:ss")}', 'Follow-up appointment'),
+                (2, 1, '{today.AddDays(7).ToString("yyyy-MM-dd HH:mm:ss")}', 'Consultation')";
+                command.ExecuteNonQuery();
             }
         }
 
@@ -237,31 +175,46 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("FullName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            dataTable.Columns.Add("Availability", typeof(bool));
-            dataTable.Columns.Add("FirstName", typeof(string));
-            dataTable.Columns.Add("LastName", typeof(string));
-            dataTable.Columns.Add("PhoneNumber", typeof(string));
-            
-            // Fill the DataTable with doctors
-            foreach (var doctor in doctors)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                DataRow row = dataTable.NewRow();
-                row["DoctorID"] = doctor.DoctorID;
-                row["FullName"] = doctor.FullName;
-                row["Specialty"] = doctor.Specialty;
-                row["Availability"] = doctor.Availability;
+                connection.Open();
+                string query = "SELECT DoctorID, FullName, Specialty, Availability, PhoneNumber FROM Doctors";
                 
-                // Extract FirstName and LastName from FullName
-                string[] nameParts = doctor.FullName.Split(new char[] { ' ' }, 2);
-                row["FirstName"] = nameParts[0];
-                row["LastName"] = nameParts.Length > 1 ? nameParts[1] : "";
-                row["PhoneNumber"] = doctor.PhoneNumber ?? "";
-                
-                dataTable.Rows.Add(row);
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        // Add FirstName and LastName columns for use in the DoctorManagementForm
+                        if (!dataTable.Columns.Contains("FirstName"))
+                        {
+                            dataTable.Columns.Add("FirstName", typeof(string));
+                        }
+                        if (!dataTable.Columns.Contains("LastName"))
+                        {
+                            dataTable.Columns.Add("LastName", typeof(string));
+                        }
+                        if (!dataTable.Columns.Contains("PhoneNumber"))
+                        {
+                            dataTable.Columns.Add("PhoneNumber", typeof(string));
+                        }
+                        
+                        // Extract FirstName and LastName from FullName
+                        foreach (DataRow row in dataTable.Rows)
+                        {
+                            string fullName = row["FullName"].ToString();
+                            string[] nameParts = fullName.Split(new char[] { ' ' }, 2);
+                            
+                            if (nameParts.Length > 0)
+                            {
+                                row["FirstName"] = nameParts[0];
+                                row["LastName"] = nameParts.Length > 1 ? nameParts[1] : "";
+                                row["PhoneNumber"] = ""; // Default empty phone number
+                            }
+                        }
+                    }
+                }
             }
             
             return dataTable;
@@ -272,20 +225,18 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("FullName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            
-            // Fill the DataTable with available doctors
-            foreach (var doctor in doctors.Where(d => d.Availability))
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                DataRow row = dataTable.NewRow();
-                row["DoctorID"] = doctor.DoctorID;
-                row["FullName"] = doctor.FullName;
-                row["Specialty"] = doctor.Specialty;
+                connection.Open();
+                string query = "SELECT DoctorID, FullName, Specialty FROM Doctors WHERE Availability = 1";
                 
-                dataTable.Rows.Add(row);
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                    }
+                }
             }
             
             return dataTable;
@@ -296,25 +247,25 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("FullName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            dataTable.Columns.Add("Availability", typeof(bool));
-            
-            // Find the doctor
-            var doctor = doctors.FirstOrDefault(d => d.DoctorID == doctorId);
-            
-            if (doctor != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                DataRow row = dataTable.NewRow();
-                row["DoctorID"] = doctor.DoctorID;
-                row["FullName"] = doctor.FullName;
-                row["Specialty"] = doctor.Specialty;
-                row["Availability"] = doctor.Availability;
+                connection.Open();
+                string query = "SELECT DoctorID, FullName, Specialty, Availability, PhoneNumber FROM Doctors WHERE DoctorID = @DoctorID";
                 
-                dataTable.Rows.Add(row);
-                return dataTable.Rows[0];
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@DoctorID", doctorId);
+                    
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        if (dataTable.Rows.Count > 0)
+                        {
+                            return dataTable.Rows[0];
+                        }
+                    }
+                }
             }
             
             return null;
@@ -324,25 +275,41 @@ namespace MedicalAppointmentSystem.Data
         public int AddDoctor(string firstName, string lastName, string specialty, string phoneNumber)
         {
             string fullName = $"{firstName} {lastName}".Trim();
+            int newDoctorId = 0;
             
-            // Get the next available ID
-            int newDoctorId = doctors.Count > 0 ? doctors.Max(d => d.DoctorID) + 1 : 1;
-            
-            // Create new doctor
-            Doctor newDoctor = new Doctor
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                DoctorID = newDoctorId,
-                FullName = fullName,
-                Specialty = specialty,
-                Availability = true,
-                PhoneNumber = phoneNumber
-            };
-            
-            // Add to collection
-            doctors.Add(newDoctor);
-            
-            // Save changes
-            SaveData();
+                connection.Open();
+                
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Add new doctor
+                        string query = @"INSERT INTO Doctors (FullName, Specialty, Availability, PhoneNumber) 
+                                       VALUES (@FullName, @Specialty, @Availability, @PhoneNumber);
+                                       SELECT last_insert_rowid();";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@FullName", fullName);
+                            command.Parameters.AddWithValue("@Specialty", specialty);
+                            command.Parameters.AddWithValue("@Availability", 1); // Default to available
+                            command.Parameters.AddWithValue("@PhoneNumber", phoneNumber ?? "");
+                            
+                            // Get the new doctor ID
+                            newDoctorId = Convert.ToInt32(command.ExecuteScalar());
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
             
             return newDoctorId;
         }
@@ -351,75 +318,140 @@ namespace MedicalAppointmentSystem.Data
         public bool UpdateDoctor(int doctorId, string firstName, string lastName, string specialty, string phoneNumber)
         {
             string fullName = $"{firstName} {lastName}".Trim();
+            bool success = false;
             
-            // Find the doctor
-            var doctor = doctors.FirstOrDefault(d => d.DoctorID == doctorId);
-            
-            if (doctor != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                // Update properties
-                doctor.FullName = fullName;
-                doctor.Specialty = specialty;
-                doctor.PhoneNumber = phoneNumber;
+                connection.Open();
                 
-                // Save changes
-                SaveData();
-                
-                return true;
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Update existing doctor
+                        string query = @"UPDATE Doctors SET 
+                                       FullName = @FullName, 
+                                       Specialty = @Specialty, 
+                                       PhoneNumber = @PhoneNumber 
+                                       WHERE DoctorID = @DoctorID";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@DoctorID", doctorId);
+                            command.Parameters.AddWithValue("@FullName", fullName);
+                            command.Parameters.AddWithValue("@Specialty", specialty);
+                            command.Parameters.AddWithValue("@PhoneNumber", phoneNumber ?? "");
+                            
+                            int rowsAffected = command.ExecuteNonQuery();
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
             
-            return false;
+            return success;
         }
 
         // Delete doctor
         public bool DeleteDoctor(int doctorId)
         {
-            // Check if doctor has appointments
-            var doctorAppointments = appointments.Where(a => a.DoctorID == doctorId).ToList();
+            bool success = false;
             
-            if (doctorAppointments.Any())
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                // Remove all appointments for this doctor
-                foreach (var appointment in doctorAppointments)
+                connection.Open();
+                
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
                 {
-                    appointments.Remove(appointment);
+                    try
+                    {
+                        // Check if doctor has appointments
+                        string checkQuery = "SELECT COUNT(*) FROM Appointments WHERE DoctorID = @DoctorID";
+                        
+                        using (SQLiteCommand checkCommand = new SQLiteCommand(checkQuery, connection, transaction))
+                        {
+                            checkCommand.Parameters.AddWithValue("@DoctorID", doctorId);
+                            int appointmentCount = Convert.ToInt32(checkCommand.ExecuteScalar());
+                            
+                            if (appointmentCount > 0)
+                            {
+                                // Delete all appointments for this doctor
+                                string deleteAppointmentsQuery = "DELETE FROM Appointments WHERE DoctorID = @DoctorID";
+                                using (SQLiteCommand deleteAppointmentsCommand = new SQLiteCommand(deleteAppointmentsQuery, connection, transaction))
+                                {
+                                    deleteAppointmentsCommand.Parameters.AddWithValue("@DoctorID", doctorId);
+                                    deleteAppointmentsCommand.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                        
+                        // Delete the doctor
+                        string deleteQuery = "DELETE FROM Doctors WHERE DoctorID = @DoctorID";
+                        
+                        using (SQLiteCommand deleteCommand = new SQLiteCommand(deleteQuery, connection, transaction))
+                        {
+                            deleteCommand.Parameters.AddWithValue("@DoctorID", doctorId);
+                            int rowsAffected = deleteCommand.ExecuteNonQuery();
+                            
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
             
-            // Find and remove the doctor
-            var doctor = doctors.FirstOrDefault(d => d.DoctorID == doctorId);
-            
-            if (doctor != null)
-            {
-                doctors.Remove(doctor);
-                
-                // Save changes
-                SaveData();
-                
-                return true;
-            }
-            
-            return false;
+            return success;
         }
 
         // Update doctor availability
         public bool UpdateDoctorAvailability(int doctorId, bool isAvailable)
         {
-            // Find the doctor
-            var doctor = doctors.FirstOrDefault(d => d.DoctorID == doctorId);
+            bool success = false;
             
-            if (doctor != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                // Update availability
-                doctor.Availability = isAvailable;
+                connection.Open();
                 
-                // Save changes
-                SaveData();
-                
-                return true;
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Update doctor availability
+                        string query = "UPDATE Doctors SET Availability = @Availability WHERE DoctorID = @DoctorID";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@DoctorID", doctorId);
+                            command.Parameters.AddWithValue("@Availability", isAvailable ? 1 : 0);
+                            
+                            int rowsAffected = command.ExecuteNonQuery();
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
             
-            return false;
+            return success;
         }
 
         #endregion
@@ -431,20 +463,18 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("PatientID", typeof(int));
-            dataTable.Columns.Add("FullName", typeof(string));
-            dataTable.Columns.Add("Email", typeof(string));
-            
-            // Fill the DataTable with patients
-            foreach (var patient in patients)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                DataRow row = dataTable.NewRow();
-                row["PatientID"] = patient.PatientID;
-                row["FullName"] = patient.FullName;
-                row["Email"] = patient.Email;
+                connection.Open();
+                string query = "SELECT PatientID, FullName, Email FROM Patients";
                 
-                dataTable.Rows.Add(row);
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                    }
+                }
             }
             
             return dataTable;
@@ -455,23 +485,25 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("PatientID", typeof(int));
-            dataTable.Columns.Add("FullName", typeof(string));
-            dataTable.Columns.Add("Email", typeof(string));
-            
-            // Find the patient
-            var patient = patients.FirstOrDefault(p => p.PatientID == patientId);
-            
-            if (patient != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                DataRow row = dataTable.NewRow();
-                row["PatientID"] = patient.PatientID;
-                row["FullName"] = patient.FullName;
-                row["Email"] = patient.Email;
+                connection.Open();
+                string query = "SELECT PatientID, FullName, Email FROM Patients WHERE PatientID = @PatientID";
                 
-                dataTable.Rows.Add(row);
-                return dataTable.Rows[0];
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@PatientID", patientId);
+                    
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        if (dataTable.Rows.Count > 0)
+                        {
+                            return dataTable.Rows[0];
+                        }
+                    }
+                }
             }
             
             return null;
@@ -480,22 +512,39 @@ namespace MedicalAppointmentSystem.Data
         // Add a new patient
         public int AddPatient(string fullName, string email)
         {
-            // Get the next available ID
-            int newPatientId = patients.Count > 0 ? patients.Max(p => p.PatientID) + 1 : 1;
+            int newPatientId = 0;
             
-            // Create new patient
-            Patient newPatient = new Patient
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                PatientID = newPatientId,
-                FullName = fullName,
-                Email = email
-            };
-            
-            // Add to collection
-            patients.Add(newPatient);
-            
-            // Save changes
-            SaveData();
+                connection.Open();
+                
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Add new patient
+                        string query = @"INSERT INTO Patients (FullName, Email) 
+                                       VALUES (@FullName, @Email);
+                                       SELECT last_insert_rowid();";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@FullName", fullName);
+                            command.Parameters.AddWithValue("@Email", email);
+                            
+                            // Get the new patient ID
+                            newPatientId = Convert.ToInt32(command.ExecuteScalar());
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
             
             return newPatientId;
         }
@@ -503,53 +552,100 @@ namespace MedicalAppointmentSystem.Data
         // Update patient
         public bool UpdatePatient(int patientId, string fullName, string email)
         {
-            // Find the patient
-            var patient = patients.FirstOrDefault(p => p.PatientID == patientId);
+            bool success = false;
             
-            if (patient != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                // Update properties
-                patient.FullName = fullName;
-                patient.Email = email;
+                connection.Open();
                 
-                // Save changes
-                SaveData();
-                
-                return true;
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Update existing patient
+                        string query = @"UPDATE Patients SET 
+                                       FullName = @FullName, 
+                                       Email = @Email 
+                                       WHERE PatientID = @PatientID";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@PatientID", patientId);
+                            command.Parameters.AddWithValue("@FullName", fullName);
+                            command.Parameters.AddWithValue("@Email", email);
+                            
+                            int rowsAffected = command.ExecuteNonQuery();
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
             
-            return false;
+            return success;
         }
 
         // Delete patient
         public bool DeletePatient(int patientId)
         {
-            // Check if patient has appointments
-            var patientAppointments = appointments.Where(a => a.PatientID == patientId).ToList();
+            bool success = false;
             
-            if (patientAppointments.Any())
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                // Remove all appointments for this patient
-                foreach (var appointment in patientAppointments)
+                connection.Open();
+                
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
                 {
-                    appointments.Remove(appointment);
+                    try
+                    {
+                        // Check if patient has appointments
+                        string checkQuery = "SELECT COUNT(*) FROM Appointments WHERE PatientID = @PatientID";
+                        
+                        using (SQLiteCommand checkCommand = new SQLiteCommand(checkQuery, connection, transaction))
+                        {
+                            checkCommand.Parameters.AddWithValue("@PatientID", patientId);
+                            int appointmentCount = Convert.ToInt32(checkCommand.ExecuteScalar());
+                            
+                            if (appointmentCount > 0)
+                            {
+                                // Delete all appointments for this patient
+                                string deleteAppointmentsQuery = "DELETE FROM Appointments WHERE PatientID = @PatientID";
+                                using (SQLiteCommand deleteAppointmentsCommand = new SQLiteCommand(deleteAppointmentsQuery, connection, transaction))
+                                {
+                                    deleteAppointmentsCommand.Parameters.AddWithValue("@PatientID", patientId);
+                                    deleteAppointmentsCommand.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                        
+                        // Delete the patient
+                        string deleteQuery = "DELETE FROM Patients WHERE PatientID = @PatientID";
+                        
+                        using (SQLiteCommand deleteCommand = new SQLiteCommand(deleteQuery, connection, transaction))
+                        {
+                            deleteCommand.Parameters.AddWithValue("@PatientID", patientId);
+                            int rowsAffected = deleteCommand.ExecuteNonQuery();
+                            
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
             
-            // Find and remove the patient
-            var patient = patients.FirstOrDefault(p => p.PatientID == patientId);
-            
-            if (patient != null)
-            {
-                patients.Remove(patient);
-                
-                // Save changes
-                SaveData();
-                
-                return true;
-            }
-            
-            return false;
+            return success;
         }
 
         #endregion
@@ -559,24 +655,41 @@ namespace MedicalAppointmentSystem.Data
         // Create a new appointment
         public int CreateAppointment(int doctorId, int patientId, DateTime appointmentDate, string notes)
         {
-            // Get the next available ID
-            int newAppointmentId = appointments.Count > 0 ? appointments.Max(a => a.AppointmentID) + 1 : 1;
+            int newAppointmentId = 0;
             
-            // Create new appointment
-            Appointment newAppointment = new Appointment
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                AppointmentID = newAppointmentId,
-                DoctorID = doctorId,
-                PatientID = patientId,
-                AppointmentDate = appointmentDate,
-                Notes = notes
-            };
-            
-            // Add to collection
-            appointments.Add(newAppointment);
-            
-            // Save changes
-            SaveData();
+                connection.Open();
+                
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Add new appointment
+                        string query = @"INSERT INTO Appointments (DoctorID, PatientID, AppointmentDate, Notes) 
+                                       VALUES (@DoctorID, @PatientID, @AppointmentDate, @Notes);
+                                       SELECT last_insert_rowid();";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@DoctorID", doctorId);
+                            command.Parameters.AddWithValue("@PatientID", patientId);
+                            command.Parameters.AddWithValue("@AppointmentDate", appointmentDate.ToString("yyyy-MM-dd HH:mm:ss"));
+                            command.Parameters.AddWithValue("@Notes", notes ?? "");
+                            
+                            // Get the new appointment ID
+                            newAppointmentId = Convert.ToInt32(command.ExecuteScalar());
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
             
             return newAppointmentId;
         }
@@ -586,37 +699,44 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("AppointmentID", typeof(int));
-            dataTable.Columns.Add("AppointmentDate", typeof(DateTime));
-            dataTable.Columns.Add("Notes", typeof(string));
-            dataTable.Columns.Add("DoctorName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            dataTable.Columns.Add("PatientName", typeof(string));
-            dataTable.Columns.Add("PatientEmail", typeof(string));
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("PatientID", typeof(int));
-            
-            // Fill the DataTable with appointments
-            foreach (var appointment in appointments.OrderByDescending(a => a.AppointmentDate))
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                var doctor = doctors.FirstOrDefault(d => d.DoctorID == appointment.DoctorID);
-                var patient = patients.FirstOrDefault(p => p.PatientID == appointment.PatientID);
+                connection.Open();
+                string query = @"
+                    SELECT 
+                        a.AppointmentID, 
+                        a.AppointmentDate, 
+                        a.Notes, 
+                        d.FullName as DoctorName, 
+                        d.Specialty, 
+                        p.FullName as PatientName, 
+                        p.Email as PatientEmail, 
+                        a.DoctorID, 
+                        a.PatientID 
+                    FROM Appointments a
+                    JOIN Doctors d ON a.DoctorID = d.DoctorID
+                    JOIN Patients p ON a.PatientID = p.PatientID
+                    ORDER BY a.AppointmentDate DESC";
                 
-                if (doctor != null && patient != null)
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
-                    DataRow row = dataTable.NewRow();
-                    row["AppointmentID"] = appointment.AppointmentID;
-                    row["AppointmentDate"] = appointment.AppointmentDate;
-                    row["Notes"] = appointment.Notes ?? "";
-                    row["DoctorName"] = doctor.FullName;
-                    row["Specialty"] = doctor.Specialty;
-                    row["PatientName"] = patient.FullName;
-                    row["PatientEmail"] = patient.Email;
-                    row["DoctorID"] = appointment.DoctorID;
-                    row["PatientID"] = appointment.PatientID;
-                    
-                    dataTable.Rows.Add(row);
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        // Convert AppointmentDate from string to DateTime
+                        foreach (DataRow row in dataTable.Rows)
+                        {
+                            if (row["AppointmentDate"] != DBNull.Value)
+                            {
+                                string dateStr = row["AppointmentDate"].ToString();
+                                if (DateTime.TryParse(dateStr, out DateTime date))
+                                {
+                                    row["AppointmentDate"] = date;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             
@@ -627,27 +747,23 @@ namespace MedicalAppointmentSystem.Data
         public DataTable GetAppointmentsByDoctorId(int doctorId)
         {
             DataTable dataTable = new DataTable();
-
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
+                connection.Open();
                 string query = "SELECT AppointmentID FROM Appointments WHERE DoctorID = @DoctorID";
-                SqlCommand command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@DoctorID", doctorId);
-
-                try
+                
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
-                    connection.Open();
-                    SqlDataAdapter adapter = new SqlDataAdapter(command);
-                    adapter.Fill(dataTable);
-                }
-                catch (Exception ex)
-                {
-                    // Log exception
-                    Console.WriteLine($"Error getting appointments by doctor ID: {ex.Message}");
-                    throw;
+                    command.Parameters.AddWithValue("@DoctorID", doctorId);
+                    
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                    }
                 }
             }
-
+            
             return dataTable;
         }
 
@@ -656,41 +772,47 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("AppointmentID", typeof(int));
-            dataTable.Columns.Add("AppointmentDate", typeof(DateTime));
-            dataTable.Columns.Add("Notes", typeof(string));
-            dataTable.Columns.Add("DoctorName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            dataTable.Columns.Add("PatientName", typeof(string));
-            dataTable.Columns.Add("PatientEmail", typeof(string));
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("PatientID", typeof(int));
-            
-            // Fill the DataTable with appointments for this doctor
-            var doctorAppointments = appointments
-                .Where(a => a.DoctorID == doctorId)
-                .OrderByDescending(a => a.AppointmentDate);
-                
-            foreach (var appointment in doctorAppointments)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                var doctor = doctors.FirstOrDefault(d => d.DoctorID == appointment.DoctorID);
-                var patient = patients.FirstOrDefault(p => p.PatientID == appointment.PatientID);
+                connection.Open();
+                string query = @"
+                    SELECT 
+                        a.AppointmentID, 
+                        a.AppointmentDate, 
+                        a.Notes, 
+                        d.FullName as DoctorName, 
+                        d.Specialty, 
+                        p.FullName as PatientName, 
+                        p.Email as PatientEmail, 
+                        a.DoctorID, 
+                        a.PatientID 
+                    FROM Appointments a
+                    JOIN Doctors d ON a.DoctorID = d.DoctorID
+                    JOIN Patients p ON a.PatientID = p.PatientID
+                    WHERE a.DoctorID = @DoctorID
+                    ORDER BY a.AppointmentDate DESC";
                 
-                if (doctor != null && patient != null)
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
-                    DataRow row = dataTable.NewRow();
-                    row["AppointmentID"] = appointment.AppointmentID;
-                    row["AppointmentDate"] = appointment.AppointmentDate;
-                    row["Notes"] = appointment.Notes ?? "";
-                    row["DoctorName"] = doctor.FullName;
-                    row["Specialty"] = doctor.Specialty;
-                    row["PatientName"] = patient.FullName;
-                    row["PatientEmail"] = patient.Email;
-                    row["DoctorID"] = appointment.DoctorID;
-                    row["PatientID"] = appointment.PatientID;
+                    command.Parameters.AddWithValue("@DoctorID", doctorId);
                     
-                    dataTable.Rows.Add(row);
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        // Convert AppointmentDate from string to DateTime
+                        foreach (DataRow row in dataTable.Rows)
+                        {
+                            if (row["AppointmentDate"] != DBNull.Value)
+                            {
+                                string dateStr = row["AppointmentDate"].ToString();
+                                if (DateTime.TryParse(dateStr, out DateTime date))
+                                {
+                                    row["AppointmentDate"] = date;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             
@@ -702,41 +824,47 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("AppointmentID", typeof(int));
-            dataTable.Columns.Add("AppointmentDate", typeof(DateTime));
-            dataTable.Columns.Add("Notes", typeof(string));
-            dataTable.Columns.Add("DoctorName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            dataTable.Columns.Add("PatientName", typeof(string));
-            dataTable.Columns.Add("PatientEmail", typeof(string));
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("PatientID", typeof(int));
-            
-            // Fill the DataTable with appointments for this patient
-            var patientAppointments = appointments
-                .Where(a => a.PatientID == patientId)
-                .OrderByDescending(a => a.AppointmentDate);
-                
-            foreach (var appointment in patientAppointments)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                var doctor = doctors.FirstOrDefault(d => d.DoctorID == appointment.DoctorID);
-                var patient = patients.FirstOrDefault(p => p.PatientID == appointment.PatientID);
+                connection.Open();
+                string query = @"
+                    SELECT 
+                        a.AppointmentID, 
+                        a.AppointmentDate, 
+                        a.Notes, 
+                        d.FullName as DoctorName, 
+                        d.Specialty, 
+                        p.FullName as PatientName, 
+                        p.Email as PatientEmail, 
+                        a.DoctorID, 
+                        a.PatientID 
+                    FROM Appointments a
+                    JOIN Doctors d ON a.DoctorID = d.DoctorID
+                    JOIN Patients p ON a.PatientID = p.PatientID
+                    WHERE a.PatientID = @PatientID
+                    ORDER BY a.AppointmentDate DESC";
                 
-                if (doctor != null && patient != null)
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
-                    DataRow row = dataTable.NewRow();
-                    row["AppointmentID"] = appointment.AppointmentID;
-                    row["AppointmentDate"] = appointment.AppointmentDate;
-                    row["Notes"] = appointment.Notes ?? "";
-                    row["DoctorName"] = doctor.FullName;
-                    row["Specialty"] = doctor.Specialty;
-                    row["PatientName"] = patient.FullName;
-                    row["PatientEmail"] = patient.Email;
-                    row["DoctorID"] = appointment.DoctorID;
-                    row["PatientID"] = appointment.PatientID;
+                    command.Parameters.AddWithValue("@PatientID", patientId);
                     
-                    dataTable.Rows.Add(row);
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        // Convert AppointmentDate from string to DateTime
+                        foreach (DataRow row in dataTable.Rows)
+                        {
+                            if (row["AppointmentDate"] != DBNull.Value)
+                            {
+                                string dateStr = row["AppointmentDate"].ToString();
+                                if (DateTime.TryParse(dateStr, out DateTime date))
+                                {
+                                    row["AppointmentDate"] = date;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             
@@ -748,40 +876,48 @@ namespace MedicalAppointmentSystem.Data
         {
             DataTable dataTable = new DataTable();
             
-            // Add columns to the DataTable
-            dataTable.Columns.Add("AppointmentID", typeof(int));
-            dataTable.Columns.Add("AppointmentDate", typeof(DateTime));
-            dataTable.Columns.Add("Notes", typeof(string));
-            dataTable.Columns.Add("DoctorName", typeof(string));
-            dataTable.Columns.Add("Specialty", typeof(string));
-            dataTable.Columns.Add("PatientName", typeof(string));
-            dataTable.Columns.Add("PatientEmail", typeof(string));
-            dataTable.Columns.Add("DoctorID", typeof(int));
-            dataTable.Columns.Add("PatientID", typeof(int));
-            
-            // Find the appointment
-            var appointment = appointments.FirstOrDefault(a => a.AppointmentID == appointmentId);
-            
-            if (appointment != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                var doctor = doctors.FirstOrDefault(d => d.DoctorID == appointment.DoctorID);
-                var patient = patients.FirstOrDefault(p => p.PatientID == appointment.PatientID);
+                connection.Open();
+                string query = @"
+                    SELECT 
+                        a.AppointmentID, 
+                        a.AppointmentDate, 
+                        a.Notes, 
+                        d.FullName as DoctorName, 
+                        d.Specialty, 
+                        p.FullName as PatientName, 
+                        p.Email as PatientEmail, 
+                        a.DoctorID, 
+                        a.PatientID 
+                    FROM Appointments a
+                    JOIN Doctors d ON a.DoctorID = d.DoctorID
+                    JOIN Patients p ON a.PatientID = p.PatientID
+                    WHERE a.AppointmentID = @AppointmentID";
                 
-                if (doctor != null && patient != null)
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
-                    DataRow row = dataTable.NewRow();
-                    row["AppointmentID"] = appointment.AppointmentID;
-                    row["AppointmentDate"] = appointment.AppointmentDate;
-                    row["Notes"] = appointment.Notes ?? "";
-                    row["DoctorName"] = doctor.FullName;
-                    row["Specialty"] = doctor.Specialty;
-                    row["PatientName"] = patient.FullName;
-                    row["PatientEmail"] = patient.Email;
-                    row["DoctorID"] = appointment.DoctorID;
-                    row["PatientID"] = appointment.PatientID;
+                    command.Parameters.AddWithValue("@AppointmentID", appointmentId);
                     
-                    dataTable.Rows.Add(row);
-                    return dataTable.Rows[0];
+                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                        
+                        if (dataTable.Rows.Count > 0)
+                        {
+                            // Convert AppointmentDate from string to DateTime
+                            if (dataTable.Rows[0]["AppointmentDate"] != DBNull.Value)
+                            {
+                                string dateStr = dataTable.Rows[0]["AppointmentDate"].ToString();
+                                if (DateTime.TryParse(dateStr, out DateTime date))
+                                {
+                                    dataTable.Rows[0]["AppointmentDate"] = date;
+                                }
+                            }
+                            
+                            return dataTable.Rows[0];
+                        }
+                    }
                 }
             }
             
@@ -791,43 +927,84 @@ namespace MedicalAppointmentSystem.Data
         // Update appointment
         public bool UpdateAppointment(int appointmentId, int doctorId, int patientId, DateTime appointmentDate, string notes)
         {
-            // Find the appointment
-            var appointment = appointments.FirstOrDefault(a => a.AppointmentID == appointmentId);
+            bool success = false;
             
-            if (appointment != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                // Update properties
-                appointment.DoctorID = doctorId;
-                appointment.PatientID = patientId;
-                appointment.AppointmentDate = appointmentDate;
-                appointment.Notes = notes;
+                connection.Open();
                 
-                // Save changes
-                SaveData();
-                
-                return true;
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Update existing appointment
+                        string query = @"UPDATE Appointments SET 
+                                       DoctorID = @DoctorID, 
+                                       PatientID = @PatientID, 
+                                       AppointmentDate = @AppointmentDate, 
+                                       Notes = @Notes 
+                                       WHERE AppointmentID = @AppointmentID";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@AppointmentID", appointmentId);
+                            command.Parameters.AddWithValue("@DoctorID", doctorId);
+                            command.Parameters.AddWithValue("@PatientID", patientId);
+                            command.Parameters.AddWithValue("@AppointmentDate", appointmentDate.ToString("yyyy-MM-dd HH:mm:ss"));
+                            command.Parameters.AddWithValue("@Notes", notes ?? "");
+                            
+                            int rowsAffected = command.ExecuteNonQuery();
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
             
-            return false;
+            return success;
         }
 
         // Delete appointment
         public bool DeleteAppointment(int appointmentId)
         {
-            // Find and remove the appointment
-            var appointment = appointments.FirstOrDefault(a => a.AppointmentID == appointmentId);
+            bool success = false;
             
-            if (appointment != null)
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
-                appointments.Remove(appointment);
+                connection.Open();
                 
-                // Save changes
-                SaveData();
-                
-                return true;
+                using (SQLiteTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Delete the appointment
+                        string query = "DELETE FROM Appointments WHERE AppointmentID = @AppointmentID";
+                        
+                        using (SQLiteCommand command = new SQLiteCommand(query, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@AppointmentID", appointmentId);
+                            
+                            int rowsAffected = command.ExecuteNonQuery();
+                            success = rowsAffected > 0;
+                        }
+                        
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
             
-            return false;
+            return success;
         }
 
         #endregion
