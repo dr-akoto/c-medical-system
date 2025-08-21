@@ -32,6 +32,8 @@ namespace MedicalAppointmentSystem.Forms
             this.btnViewDoctors = new System.Windows.Forms.Button();
             this.btnBookAppointment = new System.Windows.Forms.Button();
             this.btnManageAppointments = new System.Windows.Forms.Button();
+            this.btnManageDoctors = new System.Windows.Forms.Button();
+            this.btnManagePatients = new System.Windows.Forms.Button();
             this.btnExit = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
@@ -78,13 +80,35 @@ namespace MedicalAppointmentSystem.Forms
             this.btnManageAppointments.UseVisualStyleBackColor = true;
             this.btnManageAppointments.Click += new System.EventHandler(this.btnManageAppointments_Click);
             // 
+            // btnManageDoctors
+            // 
+            this.btnManageDoctors.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnManageDoctors.Location = new System.Drawing.Point(125, 270);
+            this.btnManageDoctors.Name = "btnManageDoctors";
+            this.btnManageDoctors.Size = new System.Drawing.Size(232, 43);
+            this.btnManageDoctors.TabIndex = 4;
+            this.btnManageDoctors.Text = "Manage Doctors";
+            this.btnManageDoctors.UseVisualStyleBackColor = true;
+            this.btnManageDoctors.Click += new System.EventHandler(this.btnManageDoctors_Click);
+            // 
+            // btnManagePatients
+            // 
+            this.btnManagePatients.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnManagePatients.Location = new System.Drawing.Point(125, 332);
+            this.btnManagePatients.Name = "btnManagePatients";
+            this.btnManagePatients.Size = new System.Drawing.Size(232, 43);
+            this.btnManagePatients.TabIndex = 5;
+            this.btnManagePatients.Text = "Manage Patients";
+            this.btnManagePatients.UseVisualStyleBackColor = true;
+            this.btnManagePatients.Click += new System.EventHandler(this.btnManagePatients_Click);
+            // 
             // btnExit
             // 
             this.btnExit.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnExit.Location = new System.Drawing.Point(125, 270);
+            this.btnExit.Location = new System.Drawing.Point(125, 394);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(232, 43);
-            this.btnExit.TabIndex = 4;
+            this.btnExit.TabIndex = 6;
             this.btnExit.Text = "Exit";
             this.btnExit.UseVisualStyleBackColor = true;
             this.btnExit.Click += new System.EventHandler(this.btnExit_Click);
@@ -93,8 +117,10 @@ namespace MedicalAppointmentSystem.Forms
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(482, 353);
+            this.ClientSize = new System.Drawing.Size(482, 468);
             this.Controls.Add(this.btnExit);
+            this.Controls.Add(this.btnManagePatients);
+            this.Controls.Add(this.btnManageDoctors);
             this.Controls.Add(this.btnManageAppointments);
             this.Controls.Add(this.btnBookAppointment);
             this.Controls.Add(this.btnViewDoctors);
@@ -115,6 +141,8 @@ namespace MedicalAppointmentSystem.Forms
         private System.Windows.Forms.Button btnViewDoctors;
         private System.Windows.Forms.Button btnBookAppointment;
         private System.Windows.Forms.Button btnManageAppointments;
+        private System.Windows.Forms.Button btnManageDoctors;
+        private System.Windows.Forms.Button btnManagePatients;
         private System.Windows.Forms.Button btnExit;
     }
 }

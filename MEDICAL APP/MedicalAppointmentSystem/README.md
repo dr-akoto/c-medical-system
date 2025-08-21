@@ -9,27 +9,24 @@ A Windows Forms application for managing medical appointments between doctors an
 - Manage existing appointments
 - Filter appointments by date
 - Patient registration
+- Manage doctors (add, edit, delete)
+- Manage patients (add, edit, delete)
 
 ## System Requirements
 
 - Windows 7 or higher
 - .NET Framework 4.7.2 or higher
-- SQL Server (Express or higher)
+- No database required (uses local XML storage)
 
 ## Setup Instructions
-
-### Database Setup
-
-1. Open SQL Server Management Studio
-2. Connect to your SQL Server instance
-3. Execute the `DatabaseScript.sql` file to create the database and populate it with sample data
 
 ### Application Setup
 
 1. Open the solution in Visual Studio
-2. Ensure the connection string in `App.config` is configured correctly for your SQL Server instance
-3. Build the solution
-4. Run the application
+2. Build the solution
+3. Run the application
+
+The application uses local XML storage, so no database setup is required. Sample data will be automatically generated on first run.
 
 ## Usage Guide
 
@@ -39,6 +36,8 @@ The main form serves as the landing page with navigation buttons to other forms:
 - View Doctors - Shows the list of available doctors
 - Book Appointment - Opens the appointment booking form
 - Manage Appointments - Allows viewing and editing existing appointments
+- Manage Doctors - Add, edit, or delete doctors in the system
+- Manage Patients - Add, edit, or delete patients in the system
 
 ### Doctor List Form
 
@@ -69,10 +68,21 @@ Provides functionality to:
   - `DoctorListForm.cs`: Displays doctors
   - `AppointmentForm.cs`: For booking appointments
   - `ManageAppointmentsForm.cs`: For managing existing appointments
+  - `DoctorManagementForm.cs`: For adding, editing, and deleting doctors
+  - `PatientManagementForm.cs`: For adding, editing, and deleting patients
 
 ## Technical Details
 
 - Language: C#
 - UI Framework: Windows Forms
-- Database Access: ADO.NET with SQL Server
+- Data Storage: Local XML files in the application's data directory
 - Architecture: 3-tier (Presentation, Business Logic, Data Access)
+
+## Data Storage
+
+The application uses XML files to store data locally:
+- `doctors.xml`: Contains information about doctors
+- `patients.xml`: Contains information about patients
+- `appointments.xml`: Contains information about appointments
+
+These files are automatically created in the application's data folder when the application is first run. Sample data is generated automatically.

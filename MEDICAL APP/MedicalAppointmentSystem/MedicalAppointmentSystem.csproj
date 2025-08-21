@@ -59,6 +59,12 @@
     <Compile Include="Forms\DoctorListForm.Designer.cs">
       <DependentUpon>DoctorListForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\DoctorManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\DoctorManagementForm.Designer.cs">
+      <DependentUpon>DoctorManagementForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -71,6 +77,12 @@
     <Compile Include="Forms\ManageAppointmentsForm.Designer.cs">
       <DependentUpon>ManageAppointmentsForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\PatientManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PatientManagementForm.Designer.cs">
+      <DependentUpon>PatientManagementForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Data\DatabaseHelper.cs" />
@@ -80,11 +92,17 @@
     <EmbeddedResource Include="Forms\DoctorListForm.resx">
       <DependentUpon>DoctorListForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Forms\DoctorManagementForm.resx">
+      <DependentUpon>DoctorManagementForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\ManageAppointmentsForm.resx">
       <DependentUpon>ManageAppointmentsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\PatientManagementForm.resx">
+      <DependentUpon>PatientManagementForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

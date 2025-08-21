@@ -28,9 +28,22 @@ namespace MedicalAppointmentSystem.Forms
             manageAppointmentsForm.ShowDialog();
         }
 
+        private void btnManageDoctors_Click(object sender, EventArgs e)
+        {
+            DoctorManagementForm doctorManagementForm = new DoctorManagementForm();
+            doctorManagementForm.ShowDialog();
+        }
+
+        private void btnManagePatients_Click(object sender, EventArgs e)
+        {
+            PatientManagementForm patientManagementForm = new PatientManagementForm();
+            patientManagementForm.ShowDialog();
+        }
+
         private void btnExit_Click(object sender, EventArgs e)
         {
             Application.Exit();
         }
     }
+}
 }
